@@ -11,7 +11,6 @@ using Eigen::SparseMatrix;
 
 namespace Laplacian {
 
-
 // V: vertices
 // F: indices
 // L: output, needed,   Laplace-Beltrami operator, 
@@ -24,5 +23,13 @@ void Precompute(const MatrixXd& V, const MatrixXi& F, SparseMatrix<double>& L, S
 void Smooth(MatrixXd& U, const MatrixXi& F, const SparseMatrix<double>& L);
 
 } // namespace Laplacian
+
+
+namespace Clean {
+
+void RemoveDuplicates(const MatrixXd &V, const MatrixXi &F, MatrixXd &NV, MatrixXi &NF, Eigen::VectorXi &I, const double epsilon = 2.2204e-15);
+
+} // namespace Clean
+
 
 } // namespace Utilities

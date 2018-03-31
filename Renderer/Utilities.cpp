@@ -1,4 +1,5 @@
 #include "Utilities.h"
+#include "BVHTree.h"
 
 #include <iostream>
 
@@ -10,12 +11,14 @@
 #include <igl/jet.h>
 #include <igl/massmatrix.h>
 #include <igl/repdiag.h>
+#include <igl/AABB.h>
+
+using namespace Eigen;
+
 
 namespace Utilities {
-using namespace Eigen;
-namespace Laplacian {
 
-void Precompute(const MatrixXd& V, const MatrixXi & F, SparseMatrix<double>& L, SparseMatrix<double>* K)
+void Laplacian::Precompute(const MatrixXd& V, const MatrixXi & F, SparseMatrix<double>& L, SparseMatrix<double>* K)
 {
 	// Compute Laplace-Beltrami operator: #V by #V
 	igl::cotmatrix(V, F, L);
@@ -38,7 +41,7 @@ void Precompute(const MatrixXd& V, const MatrixXi & F, SparseMatrix<double>& L, 
 	}
 }
 
-void Smooth(Eigen::MatrixXd& U, const Eigen::MatrixXi& F, const Eigen::SparseMatrix<double>& L)
+void Laplacian::Smooth(Eigen::MatrixXd& U, const Eigen::MatrixXi& F, const Eigen::SparseMatrix<double>& L)
 {
 	const double coeff = 0.00002;
 
@@ -74,7 +77,86 @@ void Smooth(Eigen::MatrixXd& U, const Eigen::MatrixXi& F, const Eigen::SparseMat
 
 }
 
-} // namespace Laplacian
+
+void Clean::RemoveDuplicates(const MatrixXd & V, const MatrixXi & F, MatrixXd & NV, MatrixXi & NF, Eigen::VectorXi & I, const double epsilon)
+{
+	using namespace std;
+	//// build collapse map
+	int n = V.rows();
+
+	I = VectorXi(n);
+	I[0] = 0;
+
+	BVHTree tree;
+	tree.Build(V, F, epsilon);
+
+	CandidateIndexPairs canditatePairs;
+	tree.BroadPhaseDetect(canditatePairs);
+	//std::cout << canditatePairs.size() << std::endl;
+
+	std::vector<int> indicesMapping;
+	indicesMapping.reserve(n);
+	for (int i = 0; i < n; i++) indicesMapping.push_back(i);
+
+	for (const auto& p : canditatePairs)
+	{
+		int idx1 = p.first;
+		int idx2 = p.second;
+
+		if ((V.row(idx1) - V.row(idx2)).norm() < epsilon)
+		{
+			int newIdx = idx1;
+			while (indicesMapping[newIdx] != newIdx)
+				newIdx = indicesMapping[newIdx]; // trace back to root indices
+			indicesMapping[idx2] = newIdx;
+		}
+
+	}
+
+	bool *VISITED = new bool[n];
+	for (int i = 0; i <n; ++i)
+		VISITED[i] = false;
+
+	NV.resize(n, V.cols());
+	int count = 0;
+	for (int i = 0; i <n; ++i)
+	{
+		if (indicesMapping[i] == i)
+		{
+			NV.row(count) = V.row(i);
+			I[i] = count;
+			count++;
+		}
+		else
+		{
+			I[i] = I[indicesMapping[i]];
+		}
+	}
+
+	NV.conservativeResize(count, Eigen::NoChange);
+
+	count = 0;
+	std::vector<int> face;
+	NF.resizeLike(F);
+	for (int i = 0; i <F.rows(); ++i)
+	{
+		face.clear();
+		for (int j = 0; j< F.cols(); ++j)
+			if (std::find(face.begin(), face.end(), I[F(i, j)]) == face.end())
+				face.push_back(I[F(i, j)]);
+		if (face.size() == size_t(F.cols()))
+		{
+			for (unsigned j = 0; j< F.cols(); ++j)
+				NF(count, j) = face[j];
+			count++;
+		}
+	}
+	NF.conservativeResize(count, Eigen::NoChange);
+
+	//delete[] VISITED;
+
+}
 
 } // namespace Utilities
+
 

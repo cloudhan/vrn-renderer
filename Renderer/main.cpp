@@ -14,6 +14,7 @@
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 #include <igl/readOBJ.h>
+#include <igl/remove_duplicates.h>
 #include <igl/per_vertex_normals.h>
 
 
@@ -25,6 +26,11 @@
 using namespace Eigen;
 using namespace std;
 
+// before mesh cleaning
+MatrixXd rawV; // raw vertices
+MatrixXi rawF; // raw indices
+
+// after mesh cleaning
 MatrixXd V; // original vertices
 MatrixXd U; // updated vertices
 MatrixXd N; // per-vertice normals
@@ -32,9 +38,11 @@ MatrixXi F; // face indices
 SparseMatrix<double> L; // Laplace-Beltrami operator 
 SparseMatrix<double> K; 
 
+bool g_isTextured = true;
 bool g_isLeftButtonPressed = false;
-const int   g_windowWidth  = 480*2;
-const int   g_windowHeight = 480;
+const int   g_windowMultiplier = 2;
+const int   g_windowWidth  = 192*2 * g_windowMultiplier;
+const int   g_windowHeight = 192   * g_windowMultiplier;
 GLFWwindow* g_pWindow;
 
 glm::fvec3 g_lightDirection = { 1,1,1 };
@@ -57,6 +65,11 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 		g_pFaceModel->LoadMesh(U, N, F);
 	}
 
+	if (key == GLFW_KEY_T && action == GLFW_PRESS)
+	{
+		g_isTextured = !g_isTextured;
+	}
+
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
 	{
 		U = V;
@@ -64,6 +77,41 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 		g_pFaceModel->LoadMesh(V, N, F);
 	}
 
+	if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS)
+	{
+		g_lightDirection = { 0,0,1 };
+		g_pShaderProgram->SetDirectionalLight(g_lightDirection);
+	}
+
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+	{
+		g_lightDirection = { 1,-1,1 };
+		g_pShaderProgram->SetDirectionalLight(g_lightDirection);
+	}
+
+	if (key == GLFW_KEY_2 && action == GLFW_PRESS)
+	{
+		g_lightDirection = { 1,1,1 };
+		g_pShaderProgram->SetDirectionalLight(g_lightDirection);
+	}
+
+	if (key == GLFW_KEY_3 && action == GLFW_PRESS)
+	{
+		g_lightDirection = { -1,1,0 };
+		g_pShaderProgram->SetDirectionalLight(g_lightDirection);
+	}
+
+	if (key == GLFW_KEY_4 && action == GLFW_PRESS)
+	{
+		g_lightDirection = { -1,0,0 };
+		g_pShaderProgram->SetDirectionalLight(g_lightDirection);
+	}
+
+	if (key == GLFW_KEY_5 && action == GLFW_PRESS)
+	{
+		g_lightDirection = { -1,-1,0 };
+		g_pShaderProgram->SetDirectionalLight(g_lightDirection);
+	}
 }
 
 static void mouseBtnCallback(GLFWwindow* window, int button, int action, int mods)
@@ -127,7 +175,11 @@ int main()
 	g_pShaderProgram->SetDefaults();
 
 	std::cout << "Loading Obj File..." << std::endl;
-	igl::readOBJ(R"(D:\workspaces\face_relit\face.obj)", V, F);
+	igl::readOBJ(R"(D:\workspaces\face_relit\face.obj)", rawV, rawF);
+
+	std::cout << "Cleaning Mesh..." << std::endl;
+	VectorXi I;
+	Utilities::Clean::RemoveDuplicates(rawV, rawF, V, F, I);
 
 	std::cout << "Copying Vertices..." << std::endl;
 	// copy vertices for updating
@@ -152,8 +204,9 @@ int main()
 	std::cout << "Building Face Model..." << std::endl;
 	g_pFaceModel = std::make_unique<FaceModel>(U, N, F, R"(D:\workspaces\face_relit\face_diffuse.png)");
 
-	const auto faceView = glm::lookAt(glm::fvec3{ 96, 96, 300 }, { 96,96,0 }, { 0, -1, 0 });
-	const auto facePerspective = glm::perspective<float>(glm::pi<float>() / 4.0f, 1.0f, 0.01f, 1000.0f);
+	const auto faceView = glm::lookAt(glm::fvec3{ 96, 96, 400 }, { 96,96,0 }, { 0, -1, 0 });
+	const auto facePerspective = glm::perspective<float>(glm::pi<float>() / 6.0f, 1.0f, 0.01f, 1000.0f);
+	//const auto facePerspective = glm::ortho<float>(-96, 96, -96, 96, 0.01, 1000);
 
 	g_pDLSphere->SetMatrixView(glm::lookAt(glm::fvec3{ 0, 0, 3 }, { 0,0,0 }, { 0, -1, 0 }));
 	g_pDLSphere->SetMatrixProjection(glm::ortho<float>(-2, 2, -2, 2, 0.01, 1000));
@@ -172,13 +225,15 @@ int main()
 		glViewport(0, 0, g_windowWidth / 2, g_windowHeight);
 		g_pShaderProgram->SetMatrixView(faceView);
 		g_pShaderProgram->SetMatrixProjection(facePerspective);
-		g_pShaderProgram->SetIsTextured(true);
+		g_pShaderProgram->SetIsTextured(g_isTextured);
+		g_pShaderProgram->SetIsSpeculared(true);
 		g_pFaceModel->Draw();
 
 		glViewport(g_windowWidth / 2, 0, g_windowWidth / 2, g_windowHeight);
-		g_pShaderProgram->SetIsTextured(false);
 		g_pShaderProgram->SetMatrixView(g_pDLSphere->GetMatrixView());
 		g_pShaderProgram->SetMatrixProjection(g_pDLSphere->GetMatrixProjection());
+		g_pShaderProgram->SetIsTextured(false);
+		g_pShaderProgram->SetIsSpeculared(false);
 		g_pDLSphere->Draw();
 
 		glfwSwapBuffers(g_pWindow);

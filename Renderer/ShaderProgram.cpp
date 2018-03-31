@@ -153,6 +153,12 @@ void ShaderProgram::SetIsTextured(bool flag)
 	glUniform1i(uid, flag);
 }
 
+void ShaderProgram::SetIsSpeculared(bool flag)
+{
+	auto uid = GetUniformLocation("isSpeculared");
+	glUniform1i(uid, flag);
+}
+
 void ShaderProgram::SetTextureUnit()
 {
 	auto uid = GetUniformLocation("textureDiffuse");

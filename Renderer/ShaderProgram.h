@@ -38,6 +38,7 @@ public:
 	void SetCameraPosition(const glm::fvec3& cameraPosition);
 	void SetDirectionalLight(const glm::fvec3& direction);
 	void SetIsTextured(bool flag);
+	void SetIsSpeculared(bool flag);
 	void SetTextureUnit();
 
 private:

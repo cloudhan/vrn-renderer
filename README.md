@@ -1,5 +1,8 @@
 **Some old stuff.** In case you want to render [VRN](https://github.com/AaronJackson/vrn) produced face model with different lighting condition. 
 
+![](./3f.gif)
+
+
 ## Build the Renderer
 
 Following build instruction only tested on Windows 10 with lastest Visual Studio 2017

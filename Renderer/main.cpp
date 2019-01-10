@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <string>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glad/glad.h>
@@ -38,6 +39,8 @@ MatrixXi F; // face indices
 SparseMatrix<double> L; // Laplace-Beltrami operator 
 SparseMatrix<double> K; 
 
+bool g_hasTexture = false;
+string g_texturePath = "";
 bool g_isTextured = true;
 bool g_isLeftButtonPressed = false;
 const int   g_windowMultiplier = 2;
@@ -133,15 +136,25 @@ static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
+	if (argc != 2 && argc != 3) {
+		cout << "Usage:\n\n"
+			"    renderer_bin <face_obj> [<diffuse>]\n" << endl;
+		return -1;
+	}
+	if (argc == 3) {
+		g_hasTexture = true;
+		g_texturePath = argv[2];
+	}
+	
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	g_pWindow = glfwCreateWindow(g_windowWidth, g_windowHeight, "Face Relit", nullptr, nullptr);
+	g_pWindow = glfwCreateWindow(g_windowWidth, g_windowHeight, "renderer", nullptr, nullptr);
 	if (g_pWindow == nullptr)
 	{
 		cerr << "Failed to create window" << endl;
@@ -165,17 +178,17 @@ int main()
 	glfwSetCursorPosCallback(g_pWindow, cursorPosCallback);
 	
 
-	g_pDLSphere = std::make_unique<DirectionalLightSphere>(g_windowWidth / 2, 0, g_windowWidth/2, g_windowHeight, g_windowWidth, g_windowHeight);
+	g_pDLSphere = std::make_unique<DirectionalLightSphere>(g_windowWidth/2, 0, g_windowWidth/2, g_windowHeight, g_windowWidth, g_windowHeight);
 
 	g_pShaderProgram = std::make_unique<ShaderProgram>();
-	g_pShaderProgram->AttachSahder(R"(D:\workspaces\face_relit\Renderer\shader_vertex.glsl)", GL_VERTEX_SHADER);
-	g_pShaderProgram->AttachSahder(R"(D:\workspaces\face_relit\Renderer\shader_fragment.glsl)", GL_FRAGMENT_SHADER);
+	g_pShaderProgram->AttachSahder(R"(shader_vertex.glsl)", GL_VERTEX_SHADER);
+	g_pShaderProgram->AttachSahder(R"(shader_fragment.glsl)", GL_FRAGMENT_SHADER);
 	g_pShaderProgram->Link();
 	g_pShaderProgram->Use();
 	g_pShaderProgram->SetDefaults();
 
 	std::cout << "Loading Obj File..." << std::endl;
-	igl::readOBJ(R"(D:\workspaces\face_relit\face.obj)", rawV, rawF);
+	igl::readOBJ(argv[1], rawV, rawF);
 
 	std::cout << "Cleaning Mesh..." << std::endl;
 	VectorXi I;
@@ -202,7 +215,7 @@ int main()
 	igl::per_vertex_normals(U, F, N);
 
 	std::cout << "Building Face Model..." << std::endl;
-	g_pFaceModel = std::make_unique<FaceModel>(U, N, F, R"(D:\workspaces\face_relit\face_diffuse.png)");
+	g_pFaceModel = std::make_unique<FaceModel>(U, N, F, g_texturePath);
 
 	const auto faceView = glm::lookAt(glm::fvec3{ 96, 96, 400 }, { 96,96,0 }, { 0, -1, 0 });
 	const auto facePerspective = glm::perspective<float>(glm::pi<float>() / 6.0f, 1.0f, 0.01f, 1000.0f);
@@ -225,7 +238,7 @@ int main()
 		glViewport(0, 0, g_windowWidth / 2, g_windowHeight);
 		g_pShaderProgram->SetMatrixView(faceView);
 		g_pShaderProgram->SetMatrixProjection(facePerspective);
-		g_pShaderProgram->SetIsTextured(g_isTextured);
+		g_pShaderProgram->SetIsTextured(g_hasTexture && g_isTextured);
 		g_pShaderProgram->SetIsSpeculared(true);
 		g_pFaceModel->Draw();
 

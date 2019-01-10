@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(Render)
+project(renderer)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -28,6 +28,8 @@ find_package(LIBIGL REQUIRED QUIET)
 # Add your project files
 file(GLOB HEADERS *.h)
 file(GLOB SRCFILES *.cpp)
-file(GLOB GLSLFILES *.GLSL)
+file(GLOB GLSLFILES *.glsl)
 add_executable(${PROJECT_NAME}_bin ${SRCFILES} ${HEADERS} ${GLSLFILES})
 target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::png)
+
+

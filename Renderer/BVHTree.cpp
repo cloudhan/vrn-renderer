@@ -182,7 +182,7 @@ void BVHTree::Build(const MatrixXd& V, const MatrixXi& F, double epsilon)
 }
 
 
-void BVHTree::BroadPhaseDetect(CandidateIndexPairs &candiatePairs)
+void BVHTree::BroadPhaseDetect(CandidateIndexPairs& candiatePairs)
 {
 	std::vector<std::pair<AABB, AABB>> aabb_pairs;
 

@@ -66,7 +66,6 @@ ShaderProgram::ShaderProgram(const string & vertPath, const string & fragPath)
 
 ShaderProgram::~ShaderProgram()
 {
-	cout << "~ShaderProgram()" << endl;
 	glDeleteProgram(m_pid);
 }
 

@@ -17,7 +17,7 @@ FaceModel::FaceModel(const MatrixXd& vertices, const MatrixXd& normals,
 
 	LoadMesh(vertices, normals, indices);
 
-	igl::png::texture_from_png(texture_path, m_textureId);
+	if (texture_path != "") igl::png::texture_from_png(texture_path, m_textureId);
 }
 
 FaceModel::~FaceModel()

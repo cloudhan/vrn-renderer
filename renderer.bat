@@ -1,1 +1,3 @@
-Renderer\build\RelWithDebInfo\Render_bin.exe
+pushd bin
+renderer_bin.exe ../face.obj ../face_diffuse.png
+popd

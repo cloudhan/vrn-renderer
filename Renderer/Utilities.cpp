@@ -66,7 +66,7 @@ void Laplacian::Smooth(Eigen::MatrixXd& U, const Eigen::MatrixXi& F, const Eigen
 	igl::massmatrix(U, F, igl::MASSMATRIX_TYPE_BARYCENTRIC, M);
 	// Solve (M-delta*L) U = M*U
 	const auto & S = (M - coeff*L);
-	Eigen::SimplicialLLT<Eigen::SparseMatrix<double > > solver(S);
+	Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > solver(S);
 	assert(solver.info() == Eigen::Success);
 	U = solver.solve(M*U).eval();
 
@@ -153,8 +153,7 @@ void Clean::RemoveDuplicates(const MatrixXd & V, const MatrixXi & F, MatrixXd & 
 	}
 	NF.conservativeResize(count, Eigen::NoChange);
 
-	//delete[] VISITED;
-
+	delete[] VISITED;
 }
 
 } // namespace Utilities
